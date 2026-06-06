@@ -1,0 +1,10 @@
+# binary
+tview-mysql-copy
+
+# build output
+*.exe
+*.test
+*.out
+
+# macOS
+.DS_Store
