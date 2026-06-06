@@ -20,24 +20,20 @@ func buildConnectionList(cfg *config.Config, list *tview.List, onSelect func(idx
 	})
 }
 
-func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *config.Preferences, onConnect func(c config.Connection)) tview.Primitive {
+func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *config.Preferences, onBack func(), onToggleTheme func(), onConnect func(c config.Connection)) tview.Primitive {
 	var pages *tview.Pages
 
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetBorder(true).SetTitle(" Saved Connections ").SetTitleAlign(tview.AlignLeft)
 
-	header := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignRight)
-	status := tview.NewTextView().SetDynamicColors(true)
-
-	updateHeader := func() {
-		icon := "◑"
-		label := "dark"
-		if prefs.Theme == "light" {
-			icon = "◐"
-			label = "light"
-		}
-		header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme  q=quit ", icon, label))
+	icon, label := "◑", "dark"
+	if prefs.Theme == "light" {
+		icon, label = "◐", "light"
 	}
+	header := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignRight)
+	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme  Esc=back  q=quit ", icon, label))
+
+	status := tview.NewTextView().SetDynamicColors(true)
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(header, 1, 0, false).
@@ -56,7 +52,6 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 				status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new connection")
 			}
 		})
-		updateHeader()
 	}
 
 	openForm := func(idx int) {
@@ -87,6 +82,9 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 		count := list.GetItemCount()
 
 		switch event.Key() {
+		case tcell.KeyEscape:
+			onBack()
+			return nil
 		case tcell.KeyUp:
 			if idx > 0 {
 				list.SetCurrentItem(idx - 1)
@@ -132,15 +130,7 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 			openForm(-1)
 			return nil
 		case 't':
-			if prefs.Theme == "light" {
-				prefs.Theme = "dark"
-			} else {
-				prefs.Theme = "light"
-			}
-			_ = config.SavePrefs(prefs)
-			ApplyTheme(prefs.Theme)
-			updateHeader()
-			app.Sync()
+			onToggleTheme()
 			return nil
 		case 'q':
 			app.Stop()
