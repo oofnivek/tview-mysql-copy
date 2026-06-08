@@ -8,11 +8,12 @@ import (
 	"tview-mysql-copy/config"
 )
 
-func ShowHome(app *tview.Application, prefs *config.Preferences, onManageConnections func(), onManagePresets func(), onToggleTheme func()) tview.Primitive {
+func ShowHome(app *tview.Application, prefs *config.Preferences, onManageConnections func(), onManagePresets func(), onRunPresets func(), onToggleTheme func()) tview.Primitive {
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetBorder(true).SetTitle(" Main Menu ").SetTitleAlign(tview.AlignLeft)
 	list.AddItem("Manage Connections", "", 0, nil)
 	list.AddItem("Manage Presets", "", 0, nil)
+	list.AddItem("Run Preset(s)", "", 0, nil)
 
 	icon, label := "◑", "dark"
 	if prefs.Theme == "light" {
@@ -68,6 +69,8 @@ func ShowHome(app *tview.Application, prefs *config.Preferences, onManageConnect
 			onManageConnections()
 		case 1:
 			onManagePresets()
+		case 2:
+			onRunPresets()
 		}
 	})
 

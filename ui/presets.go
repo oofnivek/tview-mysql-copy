@@ -170,11 +170,7 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 		return event
 	})
 
-	list.SetSelectedFunc(func(idx int, _, _ string, _ rune) {
-		if idx < len(pc.Presets) {
-			openForm(realIdx(idx))
-		}
-	})
+	list.SetSelectedFunc(func(_ int, _, _ string, _ rune) {})
 
 	refresh()
 

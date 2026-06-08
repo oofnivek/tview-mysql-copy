@@ -79,6 +79,14 @@ func main() {
 			toggleTheme,
 		)
 
+		runPresetsPage := ui.ShowRunPresets(app, presets, cfg, prefs,
+			func() { // onBack
+				currentPage = "home"
+				pages.SwitchToPage("home")
+			},
+			toggleTheme,
+		)
+
 		home := ui.ShowHome(app, prefs,
 			func() { // onManageConnections
 				currentPage = "connections"
@@ -88,12 +96,17 @@ func main() {
 				currentPage = "presets"
 				pages.SwitchToPage("presets")
 			},
+			func() { // onRunPresets
+				currentPage = "runpresets"
+				pages.SwitchToPage("runpresets")
+			},
 			toggleTheme,
 		)
 
 		pages.AddPage("home", home, true, true)
 		pages.AddPage("connections", connections, true, false)
 		pages.AddPage("presets", presetsPage, true, false)
+		pages.AddPage("runpresets", runPresetsPage, true, false)
 	}
 
 	buildUI()

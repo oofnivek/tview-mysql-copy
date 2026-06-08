@@ -293,6 +293,8 @@ func buildPresetForm(app *tview.Application, existing *config.Preset, allConns [
 		}
 	}
 
+	updateStatus()
+
 	leftPanel := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(srcConnList, 0, 1, true).
 		AddItem(srcDBList, 0, 1, false).
