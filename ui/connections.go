@@ -40,18 +40,25 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 		AddItem(list, 0, 1, true).
 		AddItem(status, 1, 0, false)
 
+	showStatus := func(idx int) {
+		if idx < len(cfg.Connections) {
+			c := cfg.Connections[idx]
+			status.SetText(fmt.Sprintf(
+				" [yellow]%s[white]  host=%s port=%s user=%s db=%s   [grey]↑↓/jk=nav  g/G=top/end  Enter=connect  e=edit  d=delete",
+				c.Name, c.Host, c.Port, c.User, c.Database,
+			))
+		} else {
+			status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new connection")
+		}
+	}
+
 	refresh := func() {
-		buildConnectionList(cfg, list, func(idx int) {
-			if idx < len(cfg.Connections) {
-				c := cfg.Connections[idx]
-				status.SetText(fmt.Sprintf(
-					" [yellow]%s[white]  host=%s port=%s user=%s db=%s   [grey]↑↓/jk=nav  g/G=top/end  Enter=connect  e=edit  d=delete",
-					c.Name, c.Host, c.Port, c.User, c.Database,
-				))
-			} else {
-				status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new connection")
-			}
-		})
+		buildConnectionList(cfg, list, showStatus)
+		if len(cfg.Connections) > 0 {
+			showStatus(0)
+		} else {
+			showStatus(len(cfg.Connections))
+		}
 	}
 
 	openForm := func(idx int) {

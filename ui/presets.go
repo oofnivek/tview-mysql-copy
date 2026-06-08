@@ -67,19 +67,26 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 
 	var order []int
 
+	showStatus := func(realIdx int) {
+		if realIdx < len(pc.Presets) {
+			p := pc.Presets[realIdx]
+			status.SetText(fmt.Sprintf(
+				" [yellow]%s/%s → %s/%s[white]  src_db=%s  dst_db=%s   [grey]↑↓/jk=nav  g/G=top/end  e=edit  d=delete",
+				p.SrcConnection, p.SrcTable, p.DstConnection, p.DstTable, p.SrcDatabase, p.DstDatabase,
+			))
+		} else {
+			status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new preset")
+		}
+	}
+
 	refresh := func() {
-		buildPresetList(pc, list, func(realIdx int) {
-			if realIdx < len(pc.Presets) {
-				p := pc.Presets[realIdx]
-				status.SetText(fmt.Sprintf(
-					" [yellow]%s/%s → %s/%s[white]  src_db=%s  dst_db=%s   [grey]↑↓/jk=nav  g/G=top/end  e=edit  d=delete",
-					p.SrcConnection, p.SrcTable, p.DstConnection, p.DstTable, p.SrcDatabase, p.DstDatabase,
-				))
-			} else {
-				status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new preset")
-			}
-		})
+		buildPresetList(pc, list, showStatus)
 		order = sortedPresetIndices(pc)
+		if len(order) > 0 {
+			showStatus(order[0])
+		} else {
+			showStatus(len(pc.Presets)) // points to the "[Add new preset]" item
+		}
 	}
 
 	realIdx := func(displayIdx int) int {
@@ -89,21 +96,13 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 		return displayIdx
 	}
 
-	connNames := func() []string {
-		names := make([]string, len(cfg.Connections))
-		for i, c := range cfg.Connections {
-			names[i] = c.Name
-		}
-		return names
-	}
-
 	openForm := func(idx int) {
 		var existing *config.Preset
 		if idx >= 0 && idx < len(pc.Presets) {
 			p := pc.Presets[idx]
 			existing = &p
 		}
-		form := buildPresetForm(existing, connNames(), func(p config.Preset) {
+		form := buildPresetForm(app, existing, cfg.Connections, func(p config.Preset) {
 			if idx >= 0 && idx < len(pc.Presets) {
 				p.ID = pc.Presets[idx].ID
 				pc.Presets[idx] = p
