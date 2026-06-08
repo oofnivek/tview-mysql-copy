@@ -20,6 +20,11 @@ func main() {
 		log.Fatalf("failed to load preferences: %v", err)
 	}
 
+	presets, err := config.LoadPresets()
+	if err != nil {
+		log.Fatalf("failed to load presets: %v", err)
+	}
+
 	ui.ApplyTheme(prefs.Theme)
 
 	app := tview.NewApplication()
@@ -66,16 +71,29 @@ func main() {
 			},
 		)
 
+		presetsPage := ui.ShowPresetManager(app, presets, cfg, prefs,
+			func() { // onBack
+				currentPage = "home"
+				pages.SwitchToPage("home")
+			},
+			toggleTheme,
+		)
+
 		home := ui.ShowHome(app, prefs,
 			func() { // onManageConnections
 				currentPage = "connections"
 				pages.SwitchToPage("connections")
+			},
+			func() { // onManagePresets
+				currentPage = "presets"
+				pages.SwitchToPage("presets")
 			},
 			toggleTheme,
 		)
 
 		pages.AddPage("home", home, true, true)
 		pages.AddPage("connections", connections, true, false)
+		pages.AddPage("presets", presetsPage, true, false)
 	}
 
 	buildUI()
