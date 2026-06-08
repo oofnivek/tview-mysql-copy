@@ -2,22 +2,32 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"tview-mysql-copy/config"
 )
 
-func buildConnectionList(cfg *config.Config, list *tview.List, onSelect func(idx int)) {
-	list.Clear()
-	for _, c := range cfg.Connections {
-		label := fmt.Sprintf("%s  (%s@%s:%s/%s)", c.Name, c.User, c.Host, c.Port, c.Database)
-		list.AddItem(label, "", 0, nil)
+func sortedConnIndices(cfg *config.Config) []int {
+	indices := make([]int, len(cfg.Connections))
+	for i := range indices {
+		indices[i] = i
 	}
-	list.AddItem("[Add new connection]", "", 0, nil)
-	list.SetChangedFunc(func(idx int, _, _ string, _ rune) {
-		onSelect(idx)
+	sort.Slice(indices, func(a, b int) bool {
+		return cfg.Connections[indices[a]].Name < cfg.Connections[indices[b]].Name
 	})
+	return indices
+}
+
+func buildConnectionList(cfg *config.Config, list *tview.List) []int {
+	order := sortedConnIndices(cfg)
+	list.Clear()
+	for _, i := range order {
+		c := cfg.Connections[i]
+		list.AddItem(fmt.Sprintf("%s  (%s@%s:%s/%s)", c.Name, c.User, c.Host, c.Port, c.Database), "", 0, nil)
+	}
+	return order
 }
 
 func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *config.Preferences, onBack func(), onToggleTheme func(), onConnect func(c config.Connection)) tview.Primitive {
@@ -31,34 +41,27 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 		icon, label = "◐", "light"
 	}
 	header := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignRight)
-	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme  Esc=back  q=quit ", icon, label))
+	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme ", icon, label))
 
 	status := tview.NewTextView().SetDynamicColors(true)
+	status.SetText("  [grey]↑↓/jk=navigate  g/G=top/end  a=add  e=edit  d=delete  Esc=back  q=quit")
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(header, 1, 0, false).
 		AddItem(list, 0, 1, true).
 		AddItem(status, 1, 0, false)
 
-	showStatus := func(idx int) {
-		if idx < len(cfg.Connections) {
-			c := cfg.Connections[idx]
-			status.SetText(fmt.Sprintf(
-				" [yellow]%s[white]  host=%s port=%s user=%s db=%s   [grey]↑↓/jk=nav  g/G=top/end  Enter=connect  e=edit  d=delete",
-				c.Name, c.Host, c.Port, c.User, c.Database,
-			))
-		} else {
-			status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new connection")
+	var order []int
+
+	realIdx := func(displayIdx int) int {
+		if displayIdx < len(order) {
+			return order[displayIdx]
 		}
+		return displayIdx
 	}
 
 	refresh := func() {
-		buildConnectionList(cfg, list, showStatus)
-		if len(cfg.Connections) > 0 {
-			showStatus(0)
-		} else {
-			showStatus(len(cfg.Connections))
-		}
+		order = buildConnectionList(cfg, list)
 	}
 
 	openForm := func(idx int) {
@@ -123,14 +126,26 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 			return nil
 		case 'e':
 			if idx < len(cfg.Connections) {
-				openForm(idx)
+				openForm(realIdx(idx))
 				return nil
 			}
 		case 'd':
 			if idx < len(cfg.Connections) {
-				cfg.Connections = append(cfg.Connections[:idx], cfg.Connections[idx+1:]...)
-				_ = config.Save(cfg)
-				refresh()
+				ri := realIdx(idx)
+				name := cfg.Connections[ri].Name
+				modal := tview.NewModal().
+					SetText(fmt.Sprintf("Delete [yellow]%s[white]?", name)).
+					AddButtons([]string{"Delete", "Cancel"}).
+					SetDoneFunc(func(_ int, label string) {
+						pages.RemovePage("confirm")
+						app.SetFocus(list)
+						if label == "Delete" {
+							cfg.Connections = append(cfg.Connections[:ri], cfg.Connections[ri+1:]...)
+							_ = config.Save(cfg)
+							refresh()
+						}
+					})
+				pages.AddAndSwitchToPage("confirm", modal, false)
 				return nil
 			}
 		case 'a':
@@ -146,13 +161,6 @@ func ShowConnectionManager(app *tview.Application, cfg *config.Config, prefs *co
 		return event
 	})
 
-	list.SetSelectedFunc(func(idx int, _, _ string, _ rune) {
-		if idx < len(cfg.Connections) {
-			onConnect(cfg.Connections[idx])
-		} else {
-			openForm(-1)
-		}
-	})
 
 	refresh()
 

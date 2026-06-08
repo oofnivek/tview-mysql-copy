@@ -19,10 +19,10 @@ func ShowHome(app *tview.Application, prefs *config.Preferences, onManageConnect
 		icon, label = "◐", "light"
 	}
 	header := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignRight)
-	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme  q=quit ", icon, label))
+	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme ", icon, label))
 
 	status := tview.NewTextView().SetDynamicColors(true)
-	status.SetText("  [grey]↑↓/jk=navigate  Enter=select  t=toggle theme  q=quit")
+	status.SetText("  [grey]↑↓/jk=navigate  Enter=select  q=quit")
 
 	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		idx := list.GetCurrentItem()

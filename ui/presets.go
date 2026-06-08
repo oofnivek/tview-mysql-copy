@@ -27,22 +27,14 @@ func sortedPresetIndices(pc *config.PresetConfig) []int {
 	return indices
 }
 
-func buildPresetList(pc *config.PresetConfig, list *tview.List, onSelect func(idx int)) {
+func buildPresetList(pc *config.PresetConfig, list *tview.List) []int {
 	order := sortedPresetIndices(pc)
 	list.Clear()
 	for _, i := range order {
 		p := pc.Presets[i]
-		label := fmt.Sprintf("%s/%s  →  %s/%s", p.SrcConnection, p.SrcTable, p.DstConnection, p.DstTable)
-		list.AddItem(label, "", 0, nil)
+		list.AddItem(fmt.Sprintf("%s/%s  →  %s/%s", p.SrcConnection, p.SrcTable, p.DstConnection, p.DstTable), "", 0, nil)
 	}
-	list.AddItem("[Add new preset]", "", 0, nil)
-	list.SetChangedFunc(func(displayIdx int, _, _ string, _ rune) {
-		if displayIdx < len(order) {
-			onSelect(order[displayIdx])
-		} else {
-			onSelect(displayIdx)
-		}
-	})
+	return order
 }
 
 func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *config.Config, prefs *config.Preferences, onBack func(), onToggleTheme func()) tview.Primitive {
@@ -56,9 +48,10 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 		icon, label = "◐", "light"
 	}
 	header := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignRight)
-	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme  Esc=back  q=quit ", icon, label))
+	header.SetText(fmt.Sprintf(" %s [yellow]%s mode[white]   [grey]t=toggle theme ", icon, label))
 
 	status := tview.NewTextView().SetDynamicColors(true)
+	status.SetText("  [grey]↑↓/jk=navigate  g/G=top/end  a=add  e=edit  d=delete  Esc=back  q=quit")
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(header, 1, 0, false).
@@ -67,33 +60,15 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 
 	var order []int
 
-	showStatus := func(realIdx int) {
-		if realIdx < len(pc.Presets) {
-			p := pc.Presets[realIdx]
-			status.SetText(fmt.Sprintf(
-				" [yellow]%s/%s → %s/%s[white]  src_db=%s  dst_db=%s   [grey]↑↓/jk=nav  g/G=top/end  e=edit  d=delete",
-				p.SrcConnection, p.SrcTable, p.DstConnection, p.DstTable, p.SrcDatabase, p.DstDatabase,
-			))
-		} else {
-			status.SetText("  [grey]↑↓/jk=navigate   Enter or a=add new preset")
-		}
-	}
-
-	refresh := func() {
-		buildPresetList(pc, list, showStatus)
-		order = sortedPresetIndices(pc)
-		if len(order) > 0 {
-			showStatus(order[0])
-		} else {
-			showStatus(len(pc.Presets)) // points to the "[Add new preset]" item
-		}
-	}
-
 	realIdx := func(displayIdx int) int {
 		if displayIdx < len(order) {
 			return order[displayIdx]
 		}
 		return displayIdx
+	}
+
+	refresh := func() {
+		order = buildPresetList(pc, list)
 	}
 
 	openForm := func(idx int) {
@@ -166,9 +141,20 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 		case 'd':
 			if idx < len(pc.Presets) {
 				ri := realIdx(idx)
-				pc.Presets = append(pc.Presets[:ri], pc.Presets[ri+1:]...)
-				_ = config.SavePresets(pc)
-				refresh()
+				p := pc.Presets[ri]
+				label := fmt.Sprintf("%s/%s → %s/%s", p.SrcConnection, p.SrcTable, p.DstConnection, p.DstTable)
+				modal := tview.NewModal().
+					SetText(fmt.Sprintf("Delete [yellow]%s[white]?", label)).
+					AddButtons([]string{"Delete", "Cancel"}).
+					SetDoneFunc(func(_ int, btn string) {
+						pages.RemovePage("confirm")
+						if btn == "Delete" {
+							pc.Presets = append(pc.Presets[:ri], pc.Presets[ri+1:]...)
+							_ = config.SavePresets(pc)
+							refresh()
+						}
+					})
+				pages.AddAndSwitchToPage("confirm", modal, false)
 				return nil
 			}
 		case 'a':
@@ -187,8 +173,6 @@ func ShowPresetManager(app *tview.Application, pc *config.PresetConfig, cfg *con
 	list.SetSelectedFunc(func(idx int, _, _ string, _ rune) {
 		if idx < len(pc.Presets) {
 			openForm(realIdx(idx))
-		} else {
-			openForm(-1)
 		}
 	})
 

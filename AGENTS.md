@@ -79,8 +79,9 @@ All files are created automatically on first run with safe permissions (`0600` f
 ### Form navigation
 - `ui/form.go` and `ui/preset_form.go` intercept `↑`/`↓` and convert them to `Tab`/`Shift+Tab`, which tview handles natively for field movement.
 
-### Preset list display
-- The preset list is **sorted by `src_connection` → `src_database` → `src_table`** at render time (`sortedPresetIndices`).
+### List display order
+- The **connection list** is sorted alphabetically by name at render time (`sortedConnIndices`).
+- The **preset list** is sorted by `src_connection` → `src_database` → `src_table` at render time (`sortedPresetIndices`).
 - A stable index mapping (`order []int`) translates display positions back to real `pc.Presets` slice indices for edit/delete operations.
 
 ### Preset form — two-panel live picker
@@ -118,19 +119,26 @@ The new preset UI (`buildPresetForm` in `ui/preset_form.go`) is a side-by-side p
 |-----|--------|
 | `↑` / `↓` or `j` / `k` | Navigate list |
 | `g` / `G` | Jump to top / bottom |
-| `Enter` | Select / open |
+| `Enter` | Select / open (edit on preset list) |
 | `e` | Edit selected item |
-| `d` | Delete selected item |
+| `d` | Delete selected item (shows confirmation modal) |
 | `a` | Add new item |
-| `t` | Toggle dark/light theme |
+| `t` | Toggle dark/light theme (header only, not in bottom bar) |
 | `Esc` | Go back |
 | `q` | Quit app |
 | `Ctrl+S` | Save (preset form only) |
 
-### Status bar
-- **Key hints always appear in the bottom status bar** — never duplicated in the header.
-- The status bar must be populated **immediately on screen load**, not deferred to the first navigation event. Always call the status update function explicitly after building a list (do not rely on `SetChangedFunc` firing on first render).
-- Format: `context info   [grey]key=action  key=action`
+### Status bar and header
+- **Key hints are static** — set once at construction, never updated dynamically.
+- **Key hints live in the bottom status bar only** — never duplicated in the header.
+- The header shows only the theme indicator (`◑ dark mode` / `◐ light mode`) and `t=toggle theme`.
+- `[Add new …]` list items do not exist — use `a` to add.
+- **Delete confirmation:** pressing `d` opens a `tview.Modal` with **Delete** / **Cancel** buttons overlaid on the list via `pages.AddAndSwitchToPage("confirm", …)`. On either button press: remove the page with `pages.RemovePage("confirm")`, then call `app.SetFocus(list)` to return focus to the list.
+
+### List display order
+- The **connection list** is sorted alphabetically by name at render time (`sortedConnIndices`).
+- The **preset list** is sorted by `src_connection` → `src_database` → `src_table` at render time (`sortedPresetIndices`).
+- Both use a stable `order []int` mapping so edit/delete always target the correct underlying slice index.
 
 ---
 
